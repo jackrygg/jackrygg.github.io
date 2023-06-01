@@ -9,14 +9,14 @@
 <body>
   
   <a-scene
-    mindar-image="imageTargetSrc: targets.mind"
+    mindar-image="imageTargetSrc: targets.mind" mindar-image="filterMinCF:0.1; filterBeta: 10"
     color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
     <a-assets>
       <!-- List of videos -->
       <video class="VideoList" id="video1" loop="true" src="Tremie_Reeler_Vehicle_Snuffy_2021-04-05.mp4" type="video/mp4"
         crossorigin="anonymous"></video>
-      <video class="VideoList" id="video2" loop="true" src="mind-ar-js demo.mp4" type="video/mp4"
+      <video class="VideoList" id="video2" loop="true" src="Tremie_Reeler_Vehicle_Snuffy_2021-04-05.mp4" type="video/mp4"
         crossorigin="anonymous"></video>
 
     </a-assets>
