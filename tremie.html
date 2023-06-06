@@ -8,7 +8,12 @@
  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
 
 <body>
- 
+  
+ <!-- back button -->
+ <div style="position: absolute; top: 10px; left: 10px;">
+  <button onclick="window.location.href='index.html'">Display List</button>
+  </div>
+
  <a-scene
  mindar-image="imageTargetSrc: Tremie_Targets.mind" mindar-image="filterMinCF:0.1; filterBeta: 10"
  color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
@@ -64,11 +69,6 @@
  }, 5000);
  };
  </script>
-
- <!-- back button -->
- <div style="position: absolute; top: 10px; left: 10px;">
- <button onclick="window.location.href='index.html'">Display List</button>
- </div>
 
 </body>
 
