@@ -1,65 +1,73 @@
+<!DOCTYPE html>
 <html>
 
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.1/dist/mindar-image-aframe.prod.js"></script>
 
 <body>
-  
-  <a-scene
-    mindar-image="imageTargetSrc: targets.mind" mindar-image="filterMinCF:0.1; filterBeta: 10"
-    color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false">
-    <a-assets>
-      <!-- List of videos -->
-      <video class="VideoList" id="video1" loop="true" src="Tremie_Reeler_Vehicle_Snuffy_2021-04-05.mp4" type="video/mp4"
-        crossorigin="anonymous"></video>
-        
-      <video class="VideoList" id="video2" loop="true" src="Tremie_Reeler_Vehicle_Snuffy_2021-04-05.mp4" type="video/mp4"
-        crossorigin="anonymous"></video>
+ 
+ <a-scene
+ mindar-image="imageTargetSrc: targets.mind" mindar-image="filterMinCF:0.1; filterBeta: 10"
+ color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
+ device-orientation-permission-ui="enabled: false">
+ <a-assets>
+ <!-- List of videos -->
+ <video class="VideoList" id="video1" loop="true" src="Tremie_Reeler_Vehicle_Snuffy_2021-04-05.mp4" type="video/mp4"
+ crossorigin="anonymous"></video>
+ 
+ <!-- <video class="VideoList" id="video2" loop="true" src="Tremie_Reeler_Vehicle_Snuffy_2021-04-05.mp4" type="video/mp4"
+ crossorigin="anonymous"></video> -->
+ 
+ <!-- Audio file -->
+ <audio id="audio1" src="Snuffy Audio V1.mp3"></audio>
 
-        <img id="card" src="tremie reeler 1.jfif" />
-        <a-asset-item id="avatarModel" src="scene.gltf"></a-asset-item>
+ </a-assets>
+ <!-- pair video with image index -->
+ <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    </a-assets>
-    <!-- pair video with image index -->
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+ <a-entity mindar-image-target="targetIndex: 1">
+ <!-- <a-plane src="#card" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane> -->
+ <a-video rotation="0 0 0" position="0 -0.25 0" scale="1 1 1" src="#video1"></a-video>
+ </a-entity>
+ 
+ <a-entity class="target" mindar-image-target="targetIndex: 0">
+ <a-video rotation="0 0 0" position="0 -0.25 0" scale="1 1 1" src="#video1"></a-video>
+ </a-entity>
+ 
+ </a-scene>
 
-    <a-entity mindar-image-target="targetIndex: 1">
-      <!-- <a-plane src="#card" position="0 0 0" height="0.552" width="1" rotation="0 0 0"></a-plane> -->
-      <a-obj-model rotation="0 0 0 " position="0 0 0.1" scale="1 1 1" src="#avatarModel" animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate">
-    </a-entity>
-    
-    <a-entity class="target" mindar-image-target="targetIndex: 0">
-      <a-video rotation="0 0 0" position="0 -0.25 0" scale="1 1 1" src="#video2"></a-video>
-    </a-entity>
-    
-  </a-scene>
+ <!-- video play/pause -->
+ <script>
+ const scene = document.querySelector('a-scene');
+ scene.addEventListener('loaded', () => {
+ const targets = document.querySelectorAll('.target');
+ targets.forEach(target => {
+ target.addEventListener("targetFound", event => {
+ console.log("target found");
+ var video = target.querySelector('a-video').components.material.material.map.image;
+ video.play();
+ });
+ 
+ target.addEventListener("targetLost", event => {
+ console.log("target lost");
+ var video = target.querySelector('a-video').components.material.material.map.image;
+ video.pause();
+ });
+ });
+ });
+ </script>
 
-  <!-- video play/pause -->
-  <script>
-    const scene = document.querySelector('a-scene');
-    scene.addEventListener('loaded', () => {
-      const targets = document.querySelectorAll('.target');
-      targets.forEach(target => {
-        target.addEventListener("targetFound", event => {
-          console.log("target found");
-          var video = target.querySelector('a-video').components.material.material.map.image;
-          video.play();
-        });
-  
-        target.addEventListener("targetLost", event => {
-          console.log("target lost");
-          var video = target.querySelector('a-video').components.material.material.map.image;
-          video.pause();
-        });
-      });
-    });
-  </script>
-  
-  
+ <!-- play audio after page load -->
+ <script>
+ window.onload = function() {
+ setTimeout(function() {
+ document.getElementById('audio1').play();
+ }, 15000);
+ };
+ </script>
 
 </body>
 
