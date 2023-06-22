@@ -16,24 +16,24 @@
 
         .canvas-container {
             position: absolute;
-            width: 100%;
-            height: 100vh;
+            top: 0;
+            left: 0;
+            width: 4897px;
+            height: 6337px;
             background-color: #f0f0f0;
-            overflow: scroll;
+            overflow: hidden;
         }
 
         .canvas-wrapper {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: relative;
+            width: 4897px;
+            height: 6337px;
             overflow: hidden;
         }
 
         canvas {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
         }
 
         .box {
@@ -122,14 +122,15 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+            background-size: cover;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             cursor: grab;
             user-select: none;
+
         }
     </style>
 </head>
@@ -146,6 +147,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <script>
+
         var canvas = document.getElementById("canvas");
         var ctx = canvas.getContext("2d");
         var canvasContainer = document.querySelector(".canvas-container");
@@ -171,6 +173,7 @@
 
 
         addButton.addEventListener("click", addNewBox);
+
 
         function handleGestureMove(event) {
             var zoomFactor = 0.05; // Adjust the zoom sensitivity as desired
@@ -202,6 +205,8 @@
             box.style.transform = `scale(1)`;
             box.draggable = true;
             box.style.backgroundColor = color;
+            box.style.width = "85.38px"; // Adjust the width value
+            box.style.height = "379.56px"; // Adjust the height value
 
             interact(box)
                 .draggable({
@@ -375,8 +380,8 @@
         function addNewBox() {
             var canvasWidth = canvas.width;
             var canvasHeight = canvas.height;
-            var boxWidth = 85.38;
-            var boxHeight = 379.56;
+            var boxWidth = 100;
+            var boxHeight = 100;
             var centerX = canvasWidth / 2;
             var centerY = canvasHeight / 2;
 
@@ -417,30 +422,32 @@
         });
 
         function startPan(event) {
-  if (event.target !== backgroundImg) return; // Only start panning if background image is clicked
-  isPanning = true;
-  panStartX = event.clientX;
-  panStartY = event.clientY;
-  document.body.style.cursor = "grabbing";
-}
+            if (event.target !== backgroundImg) return; // Only start panning if background image is clicked
+            isPanning = true;
+            panStartX = event.clientX;
+            panStartY = event.clientY;
+            document.body.style.cursor = "grabbing";
+        }
 
-function pan(event) {
-  if (!isPanning) return;
-  const dx = event.clientX - panStartX;
-  const dy = event.clientY - panStartY;
-  panOffsetX += dx;
-  panOffsetY += dy;
-  const offsetX = panOffsetX / zoom; // Apply zoom level to offset
-  const offsetY = panOffsetY / zoom; // Apply zoom level to offset
-  backgroundImg.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
-  panStartX = event.clientX;
-  panStartY = event.clientY;
-}
+        function pan(event) {
+            if (!isPanning) return;
+            const dx = event.clientX - panStartX;
+            const dy = event.clientY - panStartY;
+            panOffsetX += dx;
+            panOffsetY += dy;
+            const offsetX = panOffsetX / zoom; // Apply zoom level to offset
+            const offsetY = panOffsetY / zoom; // Apply zoom level to offset
+            backgroundImg.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
+            panStartX = event.clientX;
+            panStartY = event.clientY;
+        }
 
-function endPan() {
-  isPanning = false;
-  document.body.style.cursor = "grab";
-}
+        function endPan() {
+            isPanning = false;
+            document.body.style.cursor = "grab";
+        }
+
+        
     </script>
 </body>
 
