@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Magnet Board</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+
+            @media (prefers-reduced-motion: true) {
+                cursor: default;
+            }
+        }
+
+        .canvas-container {
+            position: absolute;
+            width: 100%;
+            height: 100vh;
+            background-color: #f0f0f0;
+            overflow: scroll;
+        }
+
+        .canvas-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .box {
+            width: 100px;
+            height: 100px;
+            border: 1px solid black;
+            cursor: move;
+            opacity: 1;
+            position: absolute;
+            transform: scale(1);
+            border-radius: 5px;
+            text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            /* use this instead of word-wrap */
+            white-space: pre-wrap;
+        }
+
+
+
+        .popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 5px;
+            border: 1px solid black;
+        }
+
+        .input-text {
+            width: 100%;
+            height: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .color-select {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .color-square {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            cursor: pointer;
+            border: 1px solid black;
+            border-radius: 3px;
+            margin-left: 10px;
+            padding: 3px;
+
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+            margin-top: -5px;
+            /* Add negative margin */
+            z-index: 2;
+            /* Add higher z-index */
+        }
+
+        .add-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            transform: none;
+            z-index: 9999;
+        }
+
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            cursor: grab;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="add-button">Add Box</button>
+    <div class="canvas-container">
+        <div class="canvas-wrapper" style="position: absolute;">
+            <canvas id="canvas"></canvas>
+            <div class="background-image" style="background-image: url('Yard Layout-no ships-pdf.svg');">
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <script>
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+        var canvasContainer = document.querySelector(".canvas-container");
+        var backgroundImg = document.querySelector(".background-image");
+        var addButton = document.querySelector(".add-button");
+
+        var boxes = [];
+        var selectedBox = null;
+        var popup = null;
+        var inputText = null;
+
+        var isPanning = false;
+        var panStartX = 0;
+        var panStartY = 0;
+        var panOffsetX = 0;
+        var panOffsetY = 0;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        var colorSelect;
+        var colorSquares;
+
+
+        addButton.addEventListener("click", addNewBox);
+
+        function handleGestureMove(event) {
+            var zoomFactor = 0.05; // Adjust the zoom sensitivity as desired
+            var containerRect = canvasWrapper.getBoundingClientRect(); // Use canvasWrapper instead of canvasContainer
+            var containerCenterX = containerRect.left + containerRect.width / 2;
+            var containerCenterY = containerRect.top + containerRect.height / 2;
+
+            canvas.style.transform = `scale(${zoomLevel})`;
+
+            for (var i = 0; i < boxes.length; i++) {
+                var box = boxes[i];
+                box.style.transform = `translate(${box.getBoundingClientRect().left}px, ${box.getBoundingClientRect().top}px) scale(1)`;
+            }
+
+            event.preventDefault();
+        }
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Delete" && selectedBox) {
+                selectedBox.remove();
+                selectedBox = null;
+            }
+        });
+        function addBox(x, y, text, color) {
+            var box = document.createElement("div");
+            box.className = "box";
+            box.innerHTML = text;
+            box.style.left = x + "px";
+            box.style.top = y + "px";
+            box.style.transform = `scale(1)`;
+            box.draggable = true;
+            box.style.backgroundColor = color;
+
+            interact(box)
+                .draggable({
+                    onmove: dragMoveListener,
+                    snap: {
+                        targets: [
+                            interact.createSnapGrid({ x: 5, y: 5 })
+                        ]
+                    },
+                    restrict: {
+                        elementRect: { top: 0, left: 0, bottom: 1, right: 1 },
+                        endOnly: true
+                    }
+                })
+                .on("doubletap", openPopup);
+
+            boxes.push(box);
+            backgroundImg.appendChild(box);
+
+            box.addEventListener("mousedown", function () {
+                selectBox(box);
+            });
+        }
+
+        document.addEventListener("mousedown", function (event) {
+            const isInsidePopup = event.target.closest(".popup");
+            const isCloseButton = event.target.classList.contains("close-button");
+            if (!event.target.closest(".box") &&
+                event.target !== inputText &&
+                !event.target.classList.contains("color-square") &&
+                !isInsidePopup &&
+                !isCloseButton) {
+                deselectAllBoxes();
+                console.log("deselect box event listener");
+            }
+        });
+
+        function selectBox(box) {
+            if (popup) {
+                return;
+            }
+
+            if (selectedBox) {
+                selectedBox.style.border = "1px solid black";
+            }
+
+            selectedBox = box;
+            selectedBox.style.border = "1px solid blue";
+        }
+
+        function deselectAllBoxes() {
+            if (selectedBox) {
+                selectedBox.style.border = "1px solid black";
+                selectedBox = null;
+            }
+        }
+
+        function dragMoveListener(event) {
+            var target = event.target;
+
+            var x = parseFloat(target.style.left);
+            var y = parseFloat(target.style.top);
+
+            // Adjust the sensitivity based on the zoom level
+            var sensitivity = 1 / zoom; // Invert the zoom level
+            var dx = event.dx * sensitivity;
+            var dy = event.dy * sensitivity;
+
+            x += dx;
+            y += dy;
+
+            target.style.left = x + "px";
+            target.style.top = y + "px";
+
+            var boxWidth = parseFloat(target.style.width);
+            var boxHeight = parseFloat(target.style.height);
+
+            var centerX = x + boxWidth / 2;
+            var centerY = y + boxHeight / 2;
+
+            target.style.transformOrigin = `${centerX}px ${centerY}px`;
+        }
+
+
+        function openPopup(event) {
+            selectedBox = event.currentTarget;
+
+            var boxRect = selectedBox.getBoundingClientRect();
+
+            var popupHTML = `
+  <div class="popup" style="top: ${boxRect.top}px; left: ${boxRect.left}px;">
+    <!-- Add display: flex and align-items: center to the parent element -->
+    <div class="input-container" style="display: flex; align-items: center;">
+      <input type="text" class="input-text" value="${selectedBox.innerHTML}" style="width: 300px;" tabindex="-1">
+      <div class="color-select">
+        <div class="color-squares">
+          <div class="color-square" style="background-color: red"></div>
+          <div class="color-square" style="background-color: green"></div>
+          <div class="color-square" style="background-color: yellow"></div>
+        </div>
+      </div>
+    </div>
+    <button class="close-button">X</button>
+  </div>
+`;
+
+            document.body.insertAdjacentHTML("beforeend", popupHTML);
+
+            popup = document.querySelector(".popup");
+            inputText = popup.querySelector(".input-text");
+            closeButton = popup.querySelector(".close-button");
+            colorSquares = popup.querySelectorAll(".color-square");
+            colorSelect = colorSquares[0];
+            colorSelect.value = rgbToColorString(selectedBox.style.backgroundColor);
+            inputText.addEventListener("keydown", handleEnterKey);
+            inputText.focus();
+
+            closeButton.addEventListener("click", closePopup);
+            colorSquares.forEach(function (square) {
+                square.addEventListener("click", function () {
+                    event.stopPropagation(); // Prevent event from bubbling up to parent elements
+                    if (selectedBox) {
+                        selectedBox.style.backgroundColor = this.style.backgroundColor;
+                    }
+                });
+            });
+        }
+
+
+        function rgbToColorString(rgb) {
+            var match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (match) {
+                var r = parseInt(match[1]);
+                var g = parseInt(match[2]);
+                var b = parseInt(match[3]);
+                if (r === 255 && g === 0 && b === 0) {
+                    return "red";
+                } else if (r === 0 && g === 128 && b === 0) {
+                    return "green";
+                } else if (r === 255 && g === 255 && b === 0) {
+                    return "yellow";
+                }
+            }
+            return "red"; // Default color
+        }
+
+        function handleEnterKey(event) {
+            if (event.key === "Enter") {
+                if (selectedBox) {
+                    selectedBox.innerHTML = inputText.value;
+                    console.log(selectedBox.innerText);
+                } else {
+                    console.log("No element selected");
+                }
+                event.preventDefault();
+                closePopup();
+
+            }
+        }
+
+        function closePopup() {
+            if (popup) {
+                selectedBox.innerHTML = inputText.value;
+                popup.remove();
+                popup = null;
+                inputText = null;
+                deselectAllBoxes()
+            }
+        }
+
+        function addNewBox() {
+            var canvasWidth = canvas.width;
+            var canvasHeight = canvas.height;
+            var boxWidth = 85.38;
+            var boxHeight = 379.56;
+            var centerX = canvasWidth / 2;
+            var centerY = canvasHeight / 2;
+
+            var x = centerX - boxWidth / 2;
+            var y = centerY - boxHeight / 2;
+            var text = "New Box";
+
+            addBox(x, y, text);
+        }
+
+        const zoomElements = document.querySelectorAll('.background-image, .box');
+        let zoom = 1;
+        const ZOOM_SPEED = 0.1;
+
+        document.addEventListener("wheel", function (e) {
+            if (e.deltaY > 0) {
+                zoom += ZOOM_SPEED;
+            } else {
+                zoom -= ZOOM_SPEED;
+            }
+            const offsetX = panOffsetX / zoom;
+            const offsetY = panOffsetY / zoom;
+            zoomElements.forEach((element) => {
+                element.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
+            });
+        });
+
+        backgroundImg.addEventListener("mousedown", startPan);
+        backgroundImg.addEventListener("mousemove", pan);
+        backgroundImg.addEventListener("mouseup", endPan);
+        backgroundImg.addEventListener("mouseleave", endPan);
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Delete" && selectedBox) {
+                selectedBox.remove();
+                selectedBox = null;
+            }
+        });
+
+        function startPan(event) {
+  if (event.target !== backgroundImg) return; // Only start panning if background image is clicked
+  isPanning = true;
+  panStartX = event.clientX;
+  panStartY = event.clientY;
+  document.body.style.cursor = "grabbing";
+}
+
+function pan(event) {
+  if (!isPanning) return;
+  const dx = event.clientX - panStartX;
+  const dy = event.clientY - panStartY;
+  panOffsetX += dx;
+  panOffsetY += dy;
+  const offsetX = panOffsetX / zoom; // Apply zoom level to offset
+  const offsetY = panOffsetY / zoom; // Apply zoom level to offset
+  backgroundImg.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
+  panStartX = event.clientX;
+  panStartY = event.clientY;
+}
+
+function endPan() {
+  isPanning = false;
+  document.body.style.cursor = "grab";
+}
+    </script>
+</body>
+
+</html>
