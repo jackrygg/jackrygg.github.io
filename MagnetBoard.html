@@ -39,7 +39,7 @@
         .box {
             width: 100px;
             height: 100px;
-            border: 1px solid black;
+            border: 5px solid black;
             cursor: move;
             opacity: 1;
             position: absolute;
@@ -50,9 +50,8 @@
             overflow-wrap: break-word;
             /* use this instead of word-wrap */
             white-space: pre-wrap;
+            font-size: 36px;
         }
-
-
 
         .popup {
             position: absolute;
@@ -88,19 +87,18 @@
             border-radius: 3px;
             margin-left: 10px;
             padding: 3px;
-
         }
 
         .input-container {
             display: flex;
             align-items: center;
-            padding: 5px;
+            padding: 10px;
         }
 
         .close-button {
             position: absolute;
             top: 5px;
-            right: 5px;
+            right: 0px;
             cursor: pointer;
             margin-top: -5px;
             /* Add negative margin */
@@ -110,6 +108,8 @@
 
         .add-button {
             position: fixed;
+            width: 150px;
+            height: 25px;
             top: 10px;
             left: 10px;
             transform: none;
@@ -130,17 +130,46 @@
             align-items: flex-start;
             cursor: grab;
             user-select: none;
+        }
 
+        .input-label {
+            margin-left: 5px;
+        }
+
+        .counter {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #ccc;
+            padding: 10px;
+            z-index: 9999;
+        }
+
+        .rotation-handle {
+            padding: 3px 4px;
+            display: table;
+            position: absolute;
+            left: 50%;
+            right: 50%;
+            bottom: -35px;
+            background-color: #000000;
+            border-radius: 10rem;
+            line-height: 1;
+            text-align: center;
+            font-weight: bold;
+            color: #fff;
+            cursor: move;
         }
     </style>
 </head>
 
 <body>
-    <button class="add-button">Add Box</button>
+    <button class="add-button">Add Vessel</button>
+    <div class="counter">Total Vessels: <span id="box-counter">0</span></div> <!-- Add counter div -->
     <div class="canvas-container">
         <div class="canvas-wrapper" style="position: absolute;">
             <canvas id="canvas"></canvas>
-            <div class="background-image" style="background-image: url('Yard Layout-no ships-pdf.svg');">
+            <div class="background-image" style="background-image: url('yard_layout_centered.svg');">
             </div>
         </div>
     </div>
@@ -171,6 +200,9 @@
         var colorSelect;
         var colorSquares;
 
+        var boxCounter = 0;
+        var boxCounterElement = document.getElementById("box-counter");
+        //var rotationHandle = document.querySelector('.rotation-handle');
 
         addButton.addEventListener("click", addNewBox);
 
@@ -194,6 +226,8 @@
             if (e.key === "Delete" && selectedBox) {
                 selectedBox.remove();
                 selectedBox = null;
+                boxCounter--;
+                updateBoxCounter()
             }
         });
         function addBox(x, y, text, color) {
@@ -205,40 +239,114 @@
             box.style.transform = `scale(1)`;
             box.draggable = true;
             box.style.backgroundColor = color;
-            box.style.width = "85.38px"; // Adjust the width value
-            box.style.height = "379.56px"; // Adjust the height value
+
+            var width = 85.38;
+            var height = 379.56;
+
+            box.style.width = width + "px";
+            box.style.height = height + "px";
+
+
+
 
             interact(box)
                 .draggable({
                     onmove: dragMoveListener,
                     snap: {
-                        targets: [
-                            interact.createSnapGrid({ x: 5, y: 5 })
-                        ]
+                        targets: [interact.createSnapGrid({ x: 10, y: 10 })],
                     },
                     restrict: {
                         elementRect: { top: 0, left: 0, bottom: 1, right: 1 },
-                        endOnly: true
-                    }
+                        endOnly: true,
+                    },
                 })
-                .on("doubletap", openPopup);
-
+                .on("doubletap", function (event) {
+                    openPopup(event, box);
+                });
             boxes.push(box);
             backgroundImg.appendChild(box);
+            boxCounter++;
+            updateBoxCounter()
 
             box.addEventListener("mousedown", function () {
                 selectBox(box);
             });
+
+            interact(".popup")
+                .draggable({
+                    onmove: dragMoveListener2,
+                });
+
+            interact('.rotation-handle').draggable({
+                listeners: {
+                    start(event) {
+                        var box = event.target.parentElement;
+                        var rect = box.getBoundingClientRect();
+
+                        // store the center as the element has css `transform-origin: center center`
+                        box.setAttribute('data-center-x', rect.left + rect.width / 2);
+                        box.setAttribute('data-center-y', rect.top + rect.height / 2);
+                        // get the angle of the element when the drag starts
+                        box.setAttribute('data-angle', getDragAngle(event));
+                    },
+                    move(event) {
+                        var box = event.target.parentElement;
+
+                        var angle = getDragAngle(event);
+                        var boxWidth = parseFloat(box.style.width);
+                        var boxHeight = parseFloat(box.style.height);
+                        var position = {
+                            x: boxWidth / 2,
+                            y: boxHeight / 2
+                        };
+
+                        // update rotation on dragmove
+                        var rotation = parseFloat(box.getAttribute('data-rotation')) || 0;
+                        rotation = angle;
+                        box.setAttribute('data-rotation', rotation);
+
+                        // update transform style on dragmove
+                        box.style.transform = `translate(${position.x}px, ${position.y}px) rotate(${rotation}rad)`;
+                    },
+                    end(event) {
+                        var box = event.target.parentElement;
+
+                        // save the angle on dragend
+                        box.setAttribute('data-angle', getDragAngle(event));
+                    },
+                },
+            });
+
+            // Helper function to calculate the drag angle
+            function getDragAngle(event) {
+                var box = event.target.parentElement;
+                var startAngle = parseFloat(box.getAttribute('data-angle')) || 0;
+                var center = {
+                    x: parseFloat(box.getAttribute('data-center-x')) || 0,
+                    y: parseFloat(box.getAttribute('data-center-y')) || 0
+                };
+                var angle = Math.atan2(center.y - event.clientY, center.x - event.clientX);
+
+                return angle - startAngle;
+            }
         }
+
+
+
+
+
 
         document.addEventListener("mousedown", function (event) {
             const isInsidePopup = event.target.closest(".popup");
             const isCloseButton = event.target.classList.contains("close-button");
+            const isRotationHandle = event.target.classList.contains("rotation-handle");
             if (!event.target.closest(".box") &&
                 event.target !== inputText &&
                 !event.target.classList.contains("color-square") &&
                 !isInsidePopup &&
-                !isCloseButton) {
+                !isCloseButton &&
+                !isRotationHandle &&
+                !popup) {  // Check if the popup is null
                 deselectAllBoxes();
                 console.log("deselect box event listener");
             }
@@ -250,19 +358,50 @@
             }
 
             if (selectedBox) {
-                selectedBox.style.border = "1px solid black";
+                selectedBox.style.border = "5px solid black";
+                //     var rotationHandle = selectedBox.querySelector('.rotation-handle');
+                // if (rotationHandle) {
+                //     console.log("rotationHandle removed - deselectAll");
+                //     selectedBox.removeChild(rotationHandle);
+                // }
+                //deselectAllBoxes();
+
+
             }
 
             selectedBox = box;
-            selectedBox.style.border = "1px solid blue";
+
+            selectedBox.style.border = "5px solid blue";
+            if (!selectedBox.querySelector(".rotation-handle")) {
+                var rotationHandle = document.createElement("span");
+                rotationHandle.className = "rotation-handle";
+                rotationHandle.innerHTML = "x";
+                selectedBox.appendChild(rotationHandle);
+            };
+            //event.preventDefault();
+
+
+        }
+        function updateBoxCounter() {
+            boxCounterElement.textContent = boxCounter // Update the box counter with the number of boxes
         }
 
         function deselectAllBoxes() {
+
             if (selectedBox) {
-                selectedBox.style.border = "1px solid black";
-                selectedBox = null;
+                selectedBox.style.border = "5px solid black";
+                var rotationHandle = selectedBox.querySelector('.rotation-handle');
+                if (rotationHandle) {
+                    console.log("rotationHandle removed - deselectAll");
+                    selectedBox.removeChild(rotationHandle);
+                }
             }
+
+
+
+            selectedBox = null;
         }
+
 
         function dragMoveListener(event) {
             var target = event.target;
@@ -270,8 +409,34 @@
             var x = parseFloat(target.style.left);
             var y = parseFloat(target.style.top);
 
-            // Adjust the sensitivity based on the zoom level
-            var sensitivity = 1 / zoom; // Invert the zoom level
+            var sensitivity = 1 / zoom; // Adjust the sensitivity based on the zoom level
+            var dx = event.dx * sensitivity;
+            var dy = event.dy * sensitivity;
+
+            x += dx;
+            y += dy;
+
+            var boxWidth = parseFloat(target.style.width);
+            var boxHeight = parseFloat(target.style.height);
+
+            var centerX = x + boxWidth / 2;
+            var centerY = y + boxHeight / 2;
+
+            target.style.left = centerX - boxWidth / 2 + "px";
+            target.style.top = centerY - boxHeight / 2 + "px";
+
+            target.style.transformOrigin = "center center"; // Set the transform origin to the center of the box
+
+
+        }
+        function dragMoveListener2(event) {
+            var target = event.target;
+
+            var x = parseFloat(target.style.left);
+            var y = parseFloat(target.style.top);
+
+
+            var sensitivity = 1;
             var dx = event.dx * sensitivity;
             var dy = event.dy * sensitivity;
 
@@ -291,27 +456,45 @@
         }
 
 
-        function openPopup(event) {
-            selectedBox = event.currentTarget;
+        function openPopup(event, box) {
+            // Close any other open popups
 
+            const openPopups = document.querySelectorAll(".popup.open");
+            for (let i = 0; i < openPopups.length; i++) {
+                openPopups[i].classList.remove("open");
+                closePopup();
+            }
+
+            // Open the popup for the current box
+            selectedBox = box;
             var boxRect = selectedBox.getBoundingClientRect();
 
+            var rotationHandle = selectedBox.querySelector('.rotation-handle');
+            if (rotationHandle) {
+                console.log("rotationHandle removed - popup");
+                selectedBox.removeChild(rotationHandle);
+            }
+
             var popupHTML = `
-  <div class="popup" style="top: ${boxRect.top}px; left: ${boxRect.left}px;">
-    <!-- Add display: flex and align-items: center to the parent element -->
-    <div class="input-container" style="display: flex; align-items: center;">
-      <input type="text" class="input-text" value="${selectedBox.innerHTML}" style="width: 300px;" tabindex="-1">
-      <div class="color-select">
-        <div class="color-squares">
-          <div class="color-square" style="background-color: red"></div>
-          <div class="color-square" style="background-color: green"></div>
-          <div class="color-square" style="background-color: yellow"></div>
-        </div>
-      </div>
-    </div>
-    <button class="close-button">X</button>
-  </div>
-`;
+        <div class="popup" style="top: ${boxRect.top}px; left: ${boxRect.left}px;">
+            <div class="input-container" style="display: flex; align-items: center; margin-bottom: 10px;">
+                <input type="text" class="input-text" value="${selectedBox.innerHTML}" style="width: 300px; border: 1px solid #ccc; padding: 5px;" tabindex="-1">
+                <div class="color-select">
+                    <div class="color-squares">
+                        <div class="color-square" style="background-color: red"></div>
+                        <div class="color-square" style="background-color: green"></div>
+                        <div class="color-square" style="background-color: yellow"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-container" style="display: flex; align-items: center; justify-content: center;">
+                <div class="input-label" style="margin-right: 10px;">Width:</div>
+                <input type="text" class="input-length" value="${(parseFloat(box.style.width) / 1.57408).toFixed(2)} ft" style="width: 100px; border: 1px solid #ccc; padding: 5px;" tabindex="-1">
+                <div class="input-label">Length:</div>
+                <input type="text" class="input-width" value="${(parseFloat(box.style.height) / 1.57408).toFixed(2)} ft" style="width: 100px; border: 1px solid #ccc; padding: 5px;" tabindex="-1">
+            </div>
+            <button class="close-button">X</button>
+        </div>`;
 
             document.body.insertAdjacentHTML("beforeend", popupHTML);
 
@@ -324,7 +507,6 @@
             inputText.addEventListener("keydown", handleEnterKey);
             inputText.focus();
 
-            closeButton.addEventListener("click", closePopup);
             colorSquares.forEach(function (square) {
                 square.addEventListener("click", function () {
                     event.stopPropagation(); // Prevent event from bubbling up to parent elements
@@ -333,8 +515,12 @@
                     }
                 });
             });
-        }
 
+            closeButton.addEventListener("click", closePopup);
+
+            // Mark the popup as open
+            popup.classList.add("open");
+        }
 
         function rgbToColorString(rgb) {
             var match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
@@ -357,69 +543,110 @@
             if (event.key === "Enter") {
                 if (selectedBox) {
                     selectedBox.innerHTML = inputText.value;
-                    console.log(selectedBox.innerText);
+                    const lengthInput = document.querySelector(".input-length");
+                    const widthInput = document.querySelector(".input-width");
+
+                    const length = parseFloat(lengthInput.value);
+                    const width = parseFloat(widthInput.value);
+
+                    if (!isNaN(length) && !isNaN(width)) {
+                        selectedBox.style.width = length * 1.57408 + "px";
+                        selectedBox.style.height = width * 1.57408 + "px";
+                    }
                 } else {
                     console.log("No element selected");
                 }
                 event.preventDefault();
                 closePopup();
-
             }
         }
+
 
         function closePopup() {
             if (popup) {
                 selectedBox.innerHTML = inputText.value;
+                const lengthInput = document.querySelector(".input-length");
+                const widthInput = document.querySelector(".input-width");
+
+                const length = parseFloat(lengthInput.value);
+                const width = parseFloat(widthInput.value);
+
+                if (!isNaN(length) && !isNaN(width)) {
+                    selectedBox.style.width = length * 1.57408 + "px";
+                    selectedBox.style.height = width * 1.57408 + "px";
+                }
                 popup.remove();
                 popup = null;
                 inputText = null;
-                deselectAllBoxes()
+                deselectAllBoxes();
             }
         }
 
         function addNewBox() {
-            var canvasWidth = canvas.width;
-            var canvasHeight = canvas.height;
-            var boxWidth = 100;
-            var boxHeight = 100;
-            var centerX = canvasWidth / 2;
-            var centerY = canvasHeight / 2;
 
-            var x = centerX - boxWidth / 2;
-            var y = centerY - boxHeight / 2;
-            var text = "New Box";
+            var text = "Vessel #";
 
-            addBox(x, y, text);
+            addBox(2570, 2500, text);
         }
+
 
         const zoomElements = document.querySelectorAll('.background-image, .box');
         let zoom = 1;
+
         const ZOOM_SPEED = 0.1;
 
+        const initialTranslate = {
+            offsetX: -4470.36,
+            offsetY: -7706.02,
+        };
+
         document.addEventListener("wheel", function (e) {
-            if (e.deltaY > 0) {
-                zoom += ZOOM_SPEED;
-            } else {
-                zoom -= ZOOM_SPEED;
-            }
-            const offsetX = panOffsetX / zoom;
-            const offsetY = panOffsetY / zoom;
+            e.preventDefault();
+            const container = document.querySelector('.canvas-container');
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+
+            // Get the mouse position relative to the container
+            const mouseX = e.clientX - containerRect.left;
+            const mouseY = e.clientY - containerRect.top;
+
+            const zoomFactor = e.deltaY < 0 ? 1 + ZOOM_SPEED : 1 - ZOOM_SPEED;
+            const previousZoom = zoom;
+            zoom *= zoomFactor;
+            const zoomRatio = zoom / previousZoom;
+
+            // Calculate the offset from the mouse position
+            const offsetXFromMouse = mouseX - panOffsetX;
+            const offsetYFromMouse = mouseY - panOffsetY;
+
+            // Adjust the offset based on the zoom ratio
+            const adjustedOffsetX = offsetXFromMouse / zoomRatio;
+            const adjustedOffsetY = offsetYFromMouse / zoomRatio;
+
+            // Calculate the new pan offset based on the adjusted offsets
+            panOffsetX = mouseX - adjustedOffsetX;
+            panOffsetY = mouseY - adjustedOffsetY;
+
+            // Calculate the new transform properties
+            const offsetX = (panOffsetX / zoom) + initialTranslate.offsetX;
+            const offsetY = (panOffsetY / zoom) + initialTranslate.offsetY;
+            const centerX = (mouseX - offsetX) / zoom;
+            const centerY = (mouseY - offsetY) / zoom;
+
+            // Update the transform properties of the zoom elements
             zoomElements.forEach((element) => {
                 element.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
+                element.style.transformOrigin = '50% 50%';
             });
-        });
+        }, { passive: false });
+
+
 
         backgroundImg.addEventListener("mousedown", startPan);
         backgroundImg.addEventListener("mousemove", pan);
         backgroundImg.addEventListener("mouseup", endPan);
         backgroundImg.addEventListener("mouseleave", endPan);
-
-        document.addEventListener("keydown", function (e) {
-            if (e.key === "Delete" && selectedBox) {
-                selectedBox.remove();
-                selectedBox = null;
-            }
-        });
 
         function startPan(event) {
             if (event.target !== backgroundImg) return; // Only start panning if background image is clicked
@@ -435,8 +662,8 @@
             const dy = event.clientY - panStartY;
             panOffsetX += dx;
             panOffsetY += dy;
-            const offsetX = panOffsetX / zoom; // Apply zoom level to offset
-            const offsetY = panOffsetY / zoom; // Apply zoom level to offset
+            const offsetX = (panOffsetX / zoom) + initialTranslate.offsetX;
+            const offsetY = (panOffsetY / zoom) + initialTranslate.offsetY;
             backgroundImg.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
             panStartX = event.clientX;
             panStartY = event.clientY;
@@ -447,7 +674,24 @@
             document.body.style.cursor = "grab";
         }
 
-        
+        window.addEventListener("load", function () {
+            var canvasWidth = canvas.width;
+            var canvasHeight = canvas.height;
+            var containerWidth = canvasContainer.offsetWidth;
+            var containerHeight = canvasContainer.offsetHeight;
+
+            var scaleX = containerWidth / canvasWidth;
+            var scaleY = containerHeight / canvasHeight;
+
+            zoom = Math.min(scaleX, scaleY) * 0.1; // Adjust the initial scale factor if necessary
+
+            var offsetX = initialTranslate.offsetX;
+            var offsetY = initialTranslate.offsetY;
+
+            backgroundImg.style.transform = `scale(${zoom}) translate(${offsetX}px, ${offsetY}px)`;
+        });
+
+
     </script>
 </body>
 
